@@ -1,0 +1,6 @@
+# .hyperfleet.yaml - Repository metadata for HyperFleet tooling
+version: v1
+repository:
+  types: [service]
+  name: maestro-cli
+  description: CLI tool for HyperFleet Maestro

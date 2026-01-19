@@ -1,0 +1,38 @@
+# Git
+.git
+.gitignore
+
+# Build outputs
+bin/
+build/
+dist/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Documentation
+*.md
+LICENSE
+OWNERS
+
+# Test and coverage
+*_test.go
+coverage.*
+*.coverprofile
+
+# Environment files
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile*
+.dockerignore
+docker-compose*.yml
