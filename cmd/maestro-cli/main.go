@@ -1,3 +1,4 @@
+// Package main provides the entry point for the maestro-cli application.
 package main
 
 import (

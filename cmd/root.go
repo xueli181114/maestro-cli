@@ -54,8 +54,8 @@ const (
 	EnvGRPCServerCAFile   = "MAESTRO_GRPC_SERVER_CA_FILE"
 	EnvGRPCClientCertFile = "MAESTRO_GRPC_CLIENT_CERT"
 	EnvGRPCClientKeyFile  = "MAESTRO_GRPC_CLIENT_KEY"
-	EnvGRPCToken          = "MAESTRO_GRPC_TOKEN"
-	EnvGRPCTokenFile      = "MAESTRO_GRPC_TOKEN_FILE"
+	EnvGRPCToken          = "MAESTRO_GRPC_TOKEN"      //nolint:gosec // This is an environment variable name, not a credential
+	EnvGRPCTokenFile      = "MAESTRO_GRPC_TOKEN_FILE" //nolint:gosec // This is an environment variable name, not a credential
 	EnvSourceID           = "MAESTRO_SOURCE_ID"
 )
 

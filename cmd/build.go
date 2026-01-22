@@ -17,6 +17,10 @@ import (
 	"github.com/hyperfleet/maestro-cli/pkg/logger"
 )
 
+const (
+	defaultOutputFormat = "json"
+)
+
 // BuildFlags contains flags for the build command
 type BuildFlags struct {
 	Name       string
@@ -90,7 +94,7 @@ Examples:
   # Build from non-existent (create new from source)
   maestro-cli build --name=new-manifestwork --consumer=cluster-west-1 \
     --source-file=full-manifestwork.yaml --force --apply`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			flags := &BuildFlags{
 				Name:       getStringFlag(cmd, "name"),
 				Consumer:   getStringFlag(cmd, "consumer"),
@@ -135,9 +139,15 @@ Examples:
 	cmd.Flags().Bool("force", false, "Create new ManifestWork if it doesn't exist")
 
 	// Mark required flags
-	cmd.MarkFlagRequired("name")
-	cmd.MarkFlagRequired("consumer")
-	cmd.MarkFlagRequired("source-file")
+	if err := cmd.MarkFlagRequired("name"); err != nil {
+		panic(err)
+	}
+	if err := cmd.MarkFlagRequired("consumer"); err != nil {
+		panic(err)
+	}
+	if err := cmd.MarkFlagRequired("source-file"); err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
@@ -193,7 +203,11 @@ func runBuildCommand(ctx context.Context, flags *BuildFlags) error {
 		log.Error(ctx, err, "Failed to create Maestro client", nil)
 		return fmt.Errorf("failed to create Maestro client: %w", err)
 	}
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			log.Warn(ctx, "Failed to close client", logger.Fields{"error": err.Error()})
+		}
+	}()
 
 	// Validate consumer exists
 	if err := client.ValidateConsumer(ctx, flags.Consumer); err != nil {
@@ -376,7 +390,7 @@ func outputManifestWork(mw *workv1.ManifestWork, outputFile, format string) erro
 	if outputFile != "" {
 		ext := strings.ToLower(filepath.Ext(outputFile))
 		if ext == ".json" {
-			format = "json"
+			format = defaultOutputFormat
 		}
 	}
 
@@ -392,7 +406,7 @@ func outputManifestWork(mw *workv1.ManifestWork, outputFile, format string) erro
 
 	// Output to file or stdout
 	if outputFile != "" {
-		if err := os.WriteFile(outputFile, data, 0644); err != nil {
+		if err := os.WriteFile(outputFile, data, 0600); err != nil {
 			return fmt.Errorf("failed to write to %s: %w", outputFile, err)
 		}
 		fmt.Printf("ManifestWork written to %s\n", outputFile)

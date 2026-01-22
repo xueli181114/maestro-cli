@@ -48,7 +48,7 @@ Examples:
 
   # Watch with timeout
   maestro-cli watch --name=hyperfleet-cluster-west-1-job --consumer=agent1 --timeout=10m`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			flags := &WatchFlags{
 				Name:         getStringFlag(cmd, "name"),
 				Consumer:     getStringFlag(cmd, "consumer"),
@@ -79,8 +79,12 @@ Examples:
 	cmd.Flags().Duration("poll-interval", maestro.DefaultPollInterval, "Interval between status checks")
 
 	// Mark required flags
-	cmd.MarkFlagRequired("name")
-	cmd.MarkFlagRequired("consumer")
+	if err := cmd.MarkFlagRequired("name"); err != nil {
+		panic(err)
+	}
+	if err := cmd.MarkFlagRequired("consumer"); err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
@@ -105,7 +109,11 @@ func runWatchCommand(ctx context.Context, flags *WatchFlags) error {
 	if err != nil {
 		return fmt.Errorf("failed to create Maestro client: %w", err)
 	}
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			log.Warn(ctx, "Failed to close client", logger.Fields{"error": err.Error()})
+		}
+	}()
 
 	// Validate consumer exists
 	if err := client.ValidateConsumer(ctx, flags.Consumer); err != nil {

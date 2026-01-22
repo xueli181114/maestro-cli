@@ -12,6 +12,10 @@ import (
 	"github.com/hyperfleet/maestro-cli/pkg/logger"
 )
 
+const (
+	statusWaiting = "Waiting"
+)
+
 // WaitFlags contains flags for the wait command
 type WaitFlags struct {
 	Name     string
@@ -54,7 +58,7 @@ Examples:
   # Wait and write results for status-reporter
   maestro-cli wait --name=hyperfleet-cluster-west-1-job --consumer=agent1 \
     --for=Available --results-path=/tmp/wait-results.json`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			flags := &WaitFlags{
 				Name:     getStringFlag(cmd, "name"),
 				Consumer: getStringFlag(cmd, "consumer"),
@@ -85,8 +89,12 @@ Examples:
 	cmd.Flags().String("for", "Available", "Condition to wait for (e.g., 'Available', 'Job:Complete', 'Job:Complete OR Job:Failed')")
 
 	// Mark required flags
-	cmd.MarkFlagRequired("name")
-	cmd.MarkFlagRequired("consumer")
+	if err := cmd.MarkFlagRequired("name"); err != nil {
+		panic(err)
+	}
+	if err := cmd.MarkFlagRequired("consumer"); err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
@@ -111,7 +119,11 @@ func runWaitCommand(ctx context.Context, flags *WaitFlags) error {
 	if err != nil {
 		return fmt.Errorf("failed to create Maestro client: %w", err)
 	}
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			log.Warn(ctx, "Failed to close client", logger.Fields{"error": err.Error()})
+		}
+	}()
 
 	// Validate consumer exists
 	if err := client.ValidateConsumer(ctx, flags.Consumer); err != nil {
@@ -145,7 +157,7 @@ func runWaitCommand(ctx context.Context, flags *WaitFlags) error {
 	var callback maestro.WaitCallback
 	if flags.ResultsPath != "" {
 		callback = func(details *maestro.ManifestWorkDetails, conditionMet bool) error {
-			status := "Waiting"
+			status := statusWaiting
 			message := fmt.Sprintf("Waiting for condition '%s'", flags.For)
 			if conditionMet {
 				status = flags.For

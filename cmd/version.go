@@ -36,7 +36,7 @@ func NewVersionCommand() *cobra.Command {
 		Use:   "version",
 		Short: "Show version information",
 		Long:  "Display version, build information, and runtime details for maestro-cli.",
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			fmt.Printf("maestro-cli version %s\n", Version)
 			fmt.Printf("Git commit: %s\n", Commit)
 			fmt.Printf("Built: %s\n", Date)

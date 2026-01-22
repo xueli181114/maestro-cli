@@ -1,3 +1,4 @@
+// Package maestro provides client functionality for interacting with Maestro services.
 package maestro
 
 import (
@@ -28,6 +29,9 @@ import (
 const (
 	// DefaultPollInterval is the default interval for polling ManifestWork status
 	DefaultPollInterval = 1 * time.Second
+
+	// Status constants
+	statusTrue = "True"
 )
 
 // Client represents a Maestro client
@@ -204,7 +208,7 @@ func createHTTPClient(insecure bool, log *logger.Logger) *http.Client {
 
 	if insecure {
 		transport.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true,
+			InsecureSkipVerify: true, //nolint:gosec // This is intentional for insecure development/testing scenarios
 		}
 		log.Warn(context.Background(), "TLS certificate verification disabled (insecure mode)",
 			logger.Fields{"reason": "grpc-insecure flag is set"})
@@ -1191,7 +1195,7 @@ func checkDetailsCondition(ctx context.Context, details *ManifestWorkDetails, co
 	var targetCond, appliedCond *ConditionSummary
 	for i := range details.Conditions {
 		cond := &details.Conditions[i]
-		if strings.EqualFold(cond.Type, condType) && cond.Status == "True" {
+		if strings.EqualFold(cond.Type, condType) && cond.Status == statusTrue {
 			targetCond = cond
 		}
 		if strings.EqualFold(cond.Type, "Applied") && cond.Status == "True" {
@@ -1546,74 +1550,11 @@ func compareNumeric(actual interface{}, expected string, operator string) bool {
 	return false
 }
 
-// checkResourceBundleCondition checks if a resource bundle status has the specified condition
-func checkResourceBundleCondition(status map[string]interface{}, condition string) bool {
-	if status == nil {
-		return false
-	}
-
-	// Check conditions array in status
-	conditions, ok := status["conditions"].([]interface{})
-	if !ok {
-		return false
-	}
-
-	for _, c := range conditions {
-		condMap, ok := c.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		condType, _ := condMap["type"].(string)
-		condStatus, _ := condMap["status"].(string)
-
-		if strings.EqualFold(condType, condition) && condStatus == "True" {
-			return true
-		}
-	}
-
-	return false
-}
-
-// formatResourceStatus formats resource bundle status for logging
-func formatResourceStatus(status map[string]interface{}) string {
-	if status == nil {
-		return "(none)"
-	}
-
-	conditions, ok := status["conditions"].([]interface{})
-	if !ok || len(conditions) == 0 {
-		return "(no conditions)"
-	}
-
-	parts := make([]string, 0, len(conditions))
-	for _, c := range conditions {
-		condMap, ok := c.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		condType, _ := condMap["type"].(string)
-		condStatus, _ := condMap["status"].(string)
-		parts = append(parts, fmt.Sprintf("%s=%s", condType, condStatus))
-	}
-
-	return strings.Join(parts, ", ")
-}
-
-// formatConditions returns a string representation of ManifestWork conditions
-func formatConditions(work *workv1.ManifestWork) string {
-	if len(work.Status.Conditions) == 0 {
-		return "(none)"
-	}
-	parts := make([]string, 0, len(work.Status.Conditions))
-	for _, c := range work.Status.Conditions {
-		parts = append(parts, fmt.Sprintf("%s=%s", c.Type, c.Status))
-	}
-	return strings.Join(parts, ", ")
-}
-
 // createTLSConfig creates TLS configuration for gRPC connection
 func createTLSConfig(config ClientConfig) (*tls.Config, error) {
-	tlsConfig := &tls.Config{}
+	tlsConfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	}
 
 	// Load server CA for verification
 	caCertPool := x509.NewCertPool()
@@ -1688,8 +1629,8 @@ func validateSearchQuery(value string) error {
 	// Allow only alphanumeric characters, hyphens, underscores, and dots
 	// This matches typical Kubernetes resource naming conventions
 	for _, r := range value {
-		if !(r >= 'a' && r <= 'z') && !(r >= 'A' && r <= 'Z') &&
-			!(r >= '0' && r <= '9') && r != '-' && r != '_' && r != '.' {
+		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') &&
+			(r < '0' || r > '9') && r != '-' && r != '_' && r != '.' {
 			return fmt.Errorf("invalid character '%c' in search query, only alphanumeric, hyphens, underscores, and dots allowed", r)
 		}
 	}

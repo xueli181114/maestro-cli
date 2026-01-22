@@ -11,6 +11,11 @@ import (
 	"github.com/hyperfleet/maestro-cli/pkg/logger"
 )
 
+const (
+	logLevelInfo  = "info"
+	logLevelDebug = "debug"
+)
+
 // ValidateFlags contains flags for the validate command
 type ValidateFlags struct {
 	ManifestFile string
@@ -49,7 +54,7 @@ Examples:
 
   # Validate with verbose output
   maestro-cli validate --manifest-file=job-manifestwork.yaml --verbose`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			flags := &ValidateFlags{
 				ManifestFile: getStringFlag(cmd, "manifest-file"),
 				// Global flags
@@ -76,7 +81,9 @@ Examples:
 	cmd.Flags().String("manifest-file", "", "Path to ManifestWork YAML/JSON file (required)")
 
 	// Mark required flags
-	cmd.MarkFlagRequired("manifest-file")
+	if err := cmd.MarkFlagRequired("manifest-file"); err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
@@ -84,9 +91,9 @@ Examples:
 // runValidateCommand executes the validate command
 func runValidateCommand(ctx context.Context, flags *ValidateFlags) error {
 	// Initialize logger
-	logLevel := "info"
+	logLevel := logLevelInfo
 	if flags.Verbose {
-		logLevel = "debug"
+		logLevel = logLevelDebug
 	}
 	log := logger.New(logger.Config{
 		Level:  logLevel,

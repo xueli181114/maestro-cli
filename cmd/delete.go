@@ -58,7 +58,7 @@ Examples:
 
   # Dry run to see what would be deleted
   maestro-cli delete --name=nginx-work --consumer=cluster-west-1 --dry-run`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			flags := &DeleteFlags{
 				Name:     getStringFlag(cmd, "name"),
 				Consumer: getStringFlag(cmd, "consumer"),
@@ -92,8 +92,12 @@ Examples:
 	cmd.Flags().Bool("dry-run", false, "Show what would be deleted without making changes")
 
 	// Mark required flags
-	cmd.MarkFlagRequired("name")
-	cmd.MarkFlagRequired("consumer")
+	if err := cmd.MarkFlagRequired("name"); err != nil {
+		panic(err)
+	}
+	if err := cmd.MarkFlagRequired("consumer"); err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
@@ -125,7 +129,11 @@ func runDeleteCommand(ctx context.Context, flags *DeleteFlags) error {
 	if err != nil {
 		return fmt.Errorf("failed to create Maestro client: %w", err)
 	}
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			log.Warn(ctx, "Failed to close client", logger.Fields{"error": err.Error()})
+		}
+	}()
 
 	// Validate consumer exists
 	if err := client.ValidateConsumer(ctx, flags.Consumer); err != nil {

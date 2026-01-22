@@ -1,3 +1,4 @@
+// Package logger provides structured logging functionality for the maestro-cli application.
 package logger
 
 import (
@@ -34,9 +35,11 @@ type Fields map[string]interface{}
 type ContextKey string
 
 const (
-	// Context keys for distributed tracing
-	TraceIDKey    ContextKey = "trace_id"
-	SpanIDKey     ContextKey = "span_id"
+	// TraceIDKey is the context key for distributed tracing trace ID
+	TraceIDKey ContextKey = "trace_id"
+	// SpanIDKey is the context key for distributed tracing span ID
+	SpanIDKey ContextKey = "span_id"
+	// RequestIDKey is the context key for request ID
 	RequestIDKey  ContextKey = "request_id"
 	EventIDKey    ContextKey = "event_id"
 	ClusterIDKey  ContextKey = "cluster_id"

@@ -88,8 +88,8 @@ func TestGetToken(t *testing.T) {
 			expected: "file-token-content",
 		},
 		{
-			name: "environment variable as fallback",
-			config: ClientConfig{},
+			name:     "environment variable as fallback",
+			config:   ClientConfig{},
 			envVar:   "env-token-fallback",
 			expected: "env-token-fallback",
 		},
@@ -105,12 +105,18 @@ func TestGetToken(t *testing.T) {
 			// Set up environment variable if needed
 			if tt.envVar != "" {
 				oldEnv := os.Getenv("MAESTRO_GRPC_TOKEN")
-				os.Setenv("MAESTRO_GRPC_TOKEN", tt.envVar)
+				if err := os.Setenv("MAESTRO_GRPC_TOKEN", tt.envVar); err != nil {
+					t.Fatalf("failed to set environment variable: %v", err)
+				}
 				defer func() {
 					if oldEnv == "" {
-						os.Unsetenv("MAESTRO_GRPC_TOKEN")
+						if err := os.Unsetenv("MAESTRO_GRPC_TOKEN"); err != nil {
+							t.Errorf("failed to unset environment variable: %v", err)
+						}
 					} else {
-						os.Setenv("MAESTRO_GRPC_TOKEN", oldEnv)
+						if err := os.Setenv("MAESTRO_GRPC_TOKEN", oldEnv); err != nil {
+							t.Errorf("failed to restore environment variable: %v", err)
+						}
 					}
 				}()
 			}
@@ -120,12 +126,14 @@ func TestGetToken(t *testing.T) {
 			if tt.config.GRPCClientTokenFile != "" {
 				dir := t.TempDir()
 				tokenFile := filepath.Join(dir, "test-token.txt")
-				if err := os.WriteFile(tokenFile, []byte("file-token-content"), 0644); err != nil {
+				if err := os.WriteFile(tokenFile, []byte("file-token-content"), 0600); err != nil {
 					t.Fatalf("failed to create token file: %v", err)
 				}
 				tt.config.GRPCClientTokenFile = tokenFile
 				cleanup = func() {
-					os.RemoveAll(dir)
+					if err := os.RemoveAll(dir); err != nil {
+						t.Errorf("failed to clean up temp dir: %v", err)
+					}
 				}
 				defer cleanup()
 			}
@@ -202,7 +210,7 @@ func TestEvaluateConditionExpression(t *testing.T) {
 	}{
 		{
 			name: "simple condition true",
-			expr:  "Available",
+			expr: "Available",
 			details: &ManifestWorkDetails{
 				Conditions: []ConditionSummary{
 					{Type: "Available", Status: "True"},
@@ -212,7 +220,7 @@ func TestEvaluateConditionExpression(t *testing.T) {
 		},
 		{
 			name: "simple condition false",
-			expr:  "Available",
+			expr: "Available",
 			details: &ManifestWorkDetails{
 				Conditions: []ConditionSummary{
 					{Type: "Available", Status: "False"},
@@ -222,7 +230,7 @@ func TestEvaluateConditionExpression(t *testing.T) {
 		},
 		{
 			name: "AND expression both true",
-			expr:  "Available AND Progressing",
+			expr: "Available AND Progressing",
 			details: &ManifestWorkDetails{
 				Conditions: []ConditionSummary{
 					{Type: "Available", Status: "True"},
@@ -233,7 +241,7 @@ func TestEvaluateConditionExpression(t *testing.T) {
 		},
 		{
 			name: "AND expression one false",
-			expr:  "Available AND Progressing",
+			expr: "Available AND Progressing",
 			details: &ManifestWorkDetails{
 				Conditions: []ConditionSummary{
 					{Type: "Available", Status: "True"},
@@ -244,7 +252,7 @@ func TestEvaluateConditionExpression(t *testing.T) {
 		},
 		{
 			name: "OR expression one true",
-			expr:  "Available OR Progressing",
+			expr: "Available OR Progressing",
 			details: &ManifestWorkDetails{
 				Conditions: []ConditionSummary{
 					{Type: "Available", Status: "False"},
@@ -255,7 +263,7 @@ func TestEvaluateConditionExpression(t *testing.T) {
 		},
 		{
 			name: "OR expression both false",
-			expr:  "Available OR Progressing",
+			expr: "Available OR Progressing",
 			details: &ManifestWorkDetails{
 				Conditions: []ConditionSummary{
 					{Type: "Available", Status: "False"},

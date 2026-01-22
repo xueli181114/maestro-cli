@@ -1,3 +1,4 @@
+// Package manifestwork provides utilities for working with Open Cluster Management ManifestWork resources.
 package manifestwork
 
 import (
@@ -74,7 +75,7 @@ type SourceFile struct {
 
 // LoadFromFile loads a ManifestWork from a YAML or JSON file
 func LoadFromFile(filePath string) (*workv1.ManifestWork, error) {
-	data, err := os.ReadFile(filePath)
+	data, err := os.ReadFile(filePath) //nolint:gosec // This is intentional - CLI tool reads user-specified files
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %w", filePath, err)
 	}
@@ -111,7 +112,7 @@ func LoadFromFile(filePath string) (*workv1.ManifestWork, error) {
 // - Just the manifests array
 // - A workload object with manifests
 func LoadSourceFile(filePath string) (*SourceFile, error) {
-	data, err := os.ReadFile(filePath)
+	data, err := os.ReadFile(filePath) //nolint:gosec // This is intentional - CLI tool reads user-specified files
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %w", filePath, err)
 	}
@@ -436,7 +437,7 @@ func WriteToFile(mw *workv1.ManifestWork, filePath string) error {
 
 	// Use 0640: owner read/write, group read (more secure than 0644 world-readable)
 	// ManifestWork files may contain sensitive Kubernetes manifests
-	if err := os.WriteFile(filePath, data, 0640); err != nil {
+	if err := os.WriteFile(filePath, data, 0600); err != nil {
 		return fmt.Errorf("failed to write file %s: %w", filePath, err)
 	}
 
@@ -460,7 +461,7 @@ func WriteResult(resultsPath string, result StatusResult) error {
 
 	// Use 0640: owner read/write, group read (restrictive but allows CI/CD group access)
 	// Results files contain status info for status-reporter integration
-	if err := os.WriteFile(resultsPath, data, 0640); err != nil {
+	if err := os.WriteFile(resultsPath, data, 0600); err != nil {
 		return fmt.Errorf("failed to write results to %s: %w", resultsPath, err)
 	}
 

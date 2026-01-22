@@ -59,7 +59,7 @@ Examples:
 
   # List with JSON output
   maestro-cli list --consumer=cluster-west-1 --output=json`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			flags := &ListFlags{
 				Consumer: getStringFlag(cmd, "consumer"),
 				Filter:   getStringFlag(cmd, "filter"),
@@ -89,7 +89,9 @@ Examples:
 	cmd.Flags().String("filter", "", "Filter by manifest content (e.g., 'nginx', 'Namespace/hyperfleet', 'Deployment/default/nginx')")
 
 	// Mark required flags
-	cmd.MarkFlagRequired("consumer")
+	if err := cmd.MarkFlagRequired("consumer"); err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
@@ -121,7 +123,11 @@ func runListCommand(ctx context.Context, flags *ListFlags) error {
 	if err != nil {
 		return fmt.Errorf("failed to create Maestro client: %w", err)
 	}
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			log.Warn(ctx, "Failed to close client", logger.Fields{"error": err.Error()})
+		}
+	}()
 
 	// Validate consumer exists
 	if err := client.ValidateConsumer(ctx, flags.Consumer); err != nil {
@@ -156,7 +162,8 @@ func runListCommand(ctx context.Context, flags *ListFlags) error {
 	case "yaml":
 		return outputResourceBundlesYAML(works)
 	default:
-		return outputResourceBundlesTable(works, flags.Consumer, flags.Filter)
+		outputResourceBundlesTable(works, flags.Consumer, flags.Filter)
+		return nil
 	}
 }
 
@@ -229,14 +236,14 @@ func matchesResourceBundleFilter(rb maestro.ResourceBundleSummary, filterKind, f
 }
 
 // outputResourceBundlesTable outputs ResourceBundleSummary in table format with details
-func outputResourceBundlesTable(items []maestro.ResourceBundleSummary, consumer, filter string) error {
+func outputResourceBundlesTable(items []maestro.ResourceBundleSummary, consumer, filter string) {
 	if len(items) == 0 {
 		if filter != "" {
 			fmt.Printf("No ManifestWorks matching '%s' found for consumer %s\n", filter, consumer)
 		} else {
 			fmt.Printf("No ManifestWorks found for consumer %s\n", consumer)
 		}
-		return nil
+		return
 	}
 
 	for i, rb := range items {
@@ -268,7 +275,6 @@ func outputResourceBundlesTable(items []maestro.ResourceBundleSummary, consumer,
 
 	fmt.Printf("\n─────────────────────────────────────────\n")
 	fmt.Printf("Total: %d ManifestWork(s) for consumer %s\n", len(items), consumer)
-	return nil
 }
 
 // outputResourceBundlesJSON outputs ResourceBundleSummary in JSON format

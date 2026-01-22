@@ -1,3 +1,4 @@
+// Package cmd provides CLI commands for the maestro-cli application.
 package cmd
 
 import (
@@ -59,7 +60,7 @@ Examples:
   # Apply with timeout (default 5m if not specified)
   maestro-cli apply --manifest-file=nodepool.yaml --consumer=cluster-west-1 \
     --wait --timeout=10m --results-path=/shared/results.json`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			flags := &ApplyFlags{
 				ManifestFile:        getStringFlag(cmd, "manifest-file"),
 				Consumer:            getStringFlag(cmd, "consumer"),
@@ -91,8 +92,12 @@ Examples:
 	cmd.Flags().Lookup("wait").NoOptDefVal = "Available" // Default when --wait is used without value
 
 	// Mark required flags
-	cmd.MarkFlagRequired("manifest-file")
-	cmd.MarkFlagRequired("consumer")
+	if err := cmd.MarkFlagRequired("manifest-file"); err != nil {
+		panic(err)
+	}
+	if err := cmd.MarkFlagRequired("consumer"); err != nil {
+		panic(err)
+	}
 
 	return cmd
 }
@@ -153,7 +158,11 @@ func runApplyCommand(ctx context.Context, flags *ApplyFlags) error {
 		})
 		return fmt.Errorf("failed to create Maestro client: %w", err)
 	}
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			log.Warn(ctx, "Failed to close client", logger.Fields{"error": err.Error()})
+		}
+	}()
 
 	// Validate consumer exists
 	if err := client.ValidateConsumer(ctx, flags.Consumer); err != nil {

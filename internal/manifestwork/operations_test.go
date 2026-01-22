@@ -5,9 +5,15 @@ import (
 	"path/filepath"
 	"testing"
 
-	workv1 "open-cluster-management.io/api/work/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	workv1 "open-cluster-management.io/api/work/v1"
+)
+
+const (
+	apiVersionManifestWork = "work.open-cluster-management.io/v1"
+	kindManifestWork       = "ManifestWork"
+	statusApplied          = "Applied"
 )
 
 func TestLoadSourceFile(t *testing.T) {
@@ -90,7 +96,7 @@ invalid: yaml: content: [
 			if tt.fileContent != "" {
 				dir := t.TempDir()
 				filePath = filepath.Join(dir, "test.yaml")
-				if err := os.WriteFile(filePath, []byte(tt.fileContent), 0644); err != nil {
+				if err := os.WriteFile(filePath, []byte(tt.fileContent), 0600); err != nil {
 					t.Fatalf("failed to create test file: %v", err)
 				}
 			} else {
@@ -127,9 +133,9 @@ func TestUnmarshalManifest(t *testing.T) {
 		validate    func(t *testing.T, target interface{})
 	}{
 		{
-			name: "valid JSON",
-			data: []byte(`{"apiVersion":"v1","kind":"ConfigMap","metadata":{"name":"test"}}`),
-			target: &workv1.Manifest{},
+			name:        "valid JSON",
+			data:        []byte(`{"apiVersion":"v1","kind":"ConfigMap","metadata":{"name":"test"}}`),
+			target:      &workv1.Manifest{},
 			expectError: false,
 			validate: func(t *testing.T, target interface{}) {
 				manifest := target.(*workv1.Manifest)
@@ -147,7 +153,7 @@ kind: ConfigMap
 metadata:
   name: test-yaml
 `),
-			target: &workv1.Manifest{},
+			target:      &workv1.Manifest{},
 			expectError: false,
 			validate: func(t *testing.T, target interface{}) {
 				manifest := target.(*workv1.Manifest)
@@ -221,10 +227,10 @@ func TestSourceFile_ToManifestWork(t *testing.T) {
 				return
 			}
 
-			if result.APIVersion != "work.open-cluster-management.io/v1" {
-				t.Errorf("expected APIVersion work.open-cluster-management.io/v1, got %s", result.APIVersion)
+			if result.APIVersion != apiVersionManifestWork {
+				t.Errorf("expected APIVersion %s, got %s", apiVersionManifestWork, result.APIVersion)
 			}
-			if result.Kind != "ManifestWork" {
+			if result.Kind != kindManifestWork {
 				t.Errorf("expected Kind ManifestWork, got %s", result.Kind)
 			}
 			if result.Name != tt.mwName {
@@ -269,10 +275,10 @@ func TestMergeManifestWorks(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:     "invalid strategy",
-			existing: &workv1.ManifestWork{},
-			source:   &SourceFile{},
-			strategy: "invalid",
+			name:        "invalid strategy",
+			existing:    &workv1.ManifestWork{},
+			source:      &SourceFile{},
+			strategy:    "invalid",
 			expectError: true,
 		},
 	}
@@ -392,7 +398,7 @@ func TestBuildStatusResult(t *testing.T) {
 	if result.Consumer != "test-consumer" {
 		t.Errorf("expected Consumer 'test-consumer', got %s", result.Consumer)
 	}
-	if result.Status != "Applied" {
+	if result.Status != statusApplied {
 		t.Errorf("expected Status 'Applied', got %s", result.Status)
 	}
 	if result.Message != "Success message" {
